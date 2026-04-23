@@ -21,10 +21,14 @@ const s3 = new AWS.S3()
 let users = []
 let posts = []
 
-// 🔁 LOAD DATA FROM S3
+// ================= LOAD FROM S3 =================
 async function loadData() {
   try {
-    const data = await s3.getObject({ Bucket: BUCKET, Key: DATA_KEY }).promise()
+    const data = await s3.getObject({
+      Bucket: BUCKET,
+      Key: DATA_KEY
+    }).promise()
+
     const parsed = JSON.parse(data.Body.toString())
     users = parsed.users || []
     posts = parsed.posts || []
@@ -34,7 +38,7 @@ async function loadData() {
   }
 }
 
-// 💾 SAVE DATA TO S3
+// ================= SAVE TO S3 =================
 async function saveData() {
   await s3.putObject({
     Bucket: BUCKET,
@@ -44,23 +48,30 @@ async function saveData() {
   }).promise()
 }
 
-// 🔐 AUTH MIDDLEWARE
+// ================= AUTH =================
 function auth(req, res, next) {
-  const token = req.headers.authorization
-  if (!token) return res.status(403).json({ msg: "No token provided" })
+  let token = req.headers.authorization
+
+  if (!token) {
+    return res.status(403).json({ msg: "No token provided" })
+  }
+
+  if (token.startsWith("Bearer ")) {
+    token = token.split(" ")[1]
+  }
 
   try {
     req.user = jwt.verify(token, SECRET)
     next()
   } catch {
-    res.status(403).json({ msg: "Invalid token" })
+    return res.status(403).json({ msg: "Invalid or expired token" })
   }
 }
 
-// 🚀 INIT LOAD
+// ================= INIT =================
 loadData()
 
-// ================= AUTH =================
+// ================= AUTH ROUTES =================
 
 app.post('/register', async (req, res) => {
   const { username, password } = req.body

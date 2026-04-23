@@ -14,14 +14,25 @@
 <script>
 const token = localStorage.getItem("token")
 
+// 🔐 FORCE LOGIN CHECK
+if (!token) {
+  alert("Please login first")
+  window.location = "index.html"
+}
+
+// ================= UPLOAD =================
 async function upload() {
   const f = file.files[0]
+  if (!f) return alert("Select a file")
+
   const form = new FormData()
   form.append("file", f)
 
   const res = await fetch('http://54.225.39.189:30007/upload', {
     method: 'POST',
-    headers: { Authorization: token },
+    headers: {
+      Authorization: "Bearer " + token
+    },
     body: form
   })
 
@@ -31,6 +42,7 @@ async function upload() {
   load()
 }
 
+// ================= LOAD POSTS =================
 async function load() {
   const res = await fetch('http://54.225.39.189:30007/posts')
   const data = await res.json()
@@ -42,7 +54,8 @@ async function load() {
       <div>
         <p><b>${p.user}</b></p>
         <img src="${p.url}" width="200"/>
-        <input id="c${i}">
+        <br>
+        <input id="c${i}" placeholder="comment">
         <button onclick="comment(${i})">Comment</button>
         ${p.comments.map(c => `<p>${c.user}: ${c.text}</p>`).join("")}
       </div>
@@ -51,6 +64,7 @@ async function load() {
   })
 }
 
+// ================= COMMENT =================
 async function comment(i) {
   const text = document.getElementById("c"+i).value
 
@@ -58,7 +72,7 @@ async function comment(i) {
     method: 'POST',
     headers: {
       'Content-Type':'application/json',
-      Authorization: token
+      Authorization: "Bearer " + token
     },
     body: JSON.stringify({ index: i, text })
   })
