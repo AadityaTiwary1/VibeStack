@@ -1,69 +1,104 @@
-const express = require("express");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-const multer = require("multer");
-const AWS = require("aws-sdk");
-const cors = require("cors");
+const express = require('express');
+const cors = require('cors');
+const multer = require('multer');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const AWS = require('aws-sdk');
 
 const app = express();
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const users = [];
 const posts = [];
 
-const SECRET = "secretkey";
+const SECRET = "secret123";
 
-AWS.config.update({ region: "us-east-1" });
+// IAM ROLE BASED (no keys)
+const s3 = new AWS.S3({
+  region: "us-east-1"
+});
 
-const s3 = new AWS.S3();
-const upload = multer({ storage: multer.memoryStorage() });
+const BUCKET = "vibestack-media-123"; // ← your bucket
 
-function auth(req, res, next) {
-  const token = req.headers.authorization;
-  if (!token) return res.sendStatus(403);
+// 🔐 AUTH MIDDLEWARE
+function auth(req, res, next){
+  const token = req.headers.authorization?.split(" ")[1];
+  if(!token) return res.status(401).send("No token");
+
   try {
-    req.user = jwt.verify(token, SECRET);
+    const data = jwt.verify(token, SECRET);
+    req.user = data.username;
     next();
   } catch {
-    res.sendStatus(403);
+    res.status(403).send("Invalid token");
   }
 }
 
-app.post("/register", async (req, res) => {
-  const hash = await bcrypt.hash(req.body.password, 10);
-  users.push({ username: req.body.username, password: hash });
-  res.send("registered");
+// REGISTER
+app.post('/register', async (req,res)=>{
+  const { username, password } = req.body;
+  const hash = await bcrypt.hash(password,10);
+  users.push({ username, password: hash });
+  res.send("Registered");
 });
 
-app.post("/login", async (req, res) => {
-  const user = users.find(u => u.username === req.body.username);
-  if (!user) return res.sendStatus(401);
+// LOGIN
+app.post('/login', async (req,res)=>{
+  const { username, password } = req.body;
+  const user = users.find(u=>u.username===username);
+  if(!user) return res.status(404).send("User not found");
 
-  const ok = await bcrypt.compare(req.body.password, user.password);
-  if (!ok) return res.sendStatus(401);
+  const ok = await bcrypt.compare(password,user.password);
+  if(!ok) return res.status(403).send("Wrong password");
 
-  const token = jwt.sign({ username: user.username }, SECRET);
+  const token = jwt.sign({ username }, SECRET);
   res.json({ token });
 });
 
-app.post("/upload", auth, upload.single("file"), async (req, res) => {
-  const data = await s3.upload({
-    Bucket: process.env.BUCKET,
-    Key: Date.now() + req.file.originalname,
-    Body: req.file.buffer
-  }).promise();
+// UPLOAD
+app.post('/upload', auth, upload.single("file"), async (req,res)=>{
+  if(!req.file) return res.status(400).send("No file");
 
-  posts.push({ url: data.Location, user: req.user.username, comments: [] });
-  res.send("uploaded");
+  const key = Date.now() + "_" + req.file.originalname;
+
+  const params = {
+    Bucket: BUCKET,
+    Key: key,
+    Body: req.file.buffer,
+    ContentType: req.file.mimetype
+  };
+
+  try {
+    await s3.upload(params).promise();
+
+    const url = `https://${BUCKET}.s3.amazonaws.com/${key}`;
+
+    posts.push({
+      url,
+      user: req.user,
+      comments:[]
+    });
+
+    res.send("Uploaded");
+  } catch(err){
+    console.log(err);
+    res.status(500).send("Upload failed");
+  }
 });
 
-app.get("/posts", (req, res) => res.json(posts));
+// POSTS
+app.get('/posts',(req,res)=>{
+  res.json(posts);
+});
 
-app.post("/comment", auth, (req, res) => {
+// COMMENT
+app.post('/comment', auth, (req,res)=>{
   const { index, text } = req.body;
-  posts[index].comments.push({ user: req.user.username, text });
-  res.send("done");
+  posts[index].comments.push(req.user + ": " + text);
+  res.send("Comment added");
 });
 
-app.listen(3000);
+app.listen(3000,()=>console.log("Backend running"));

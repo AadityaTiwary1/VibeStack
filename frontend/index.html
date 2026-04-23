@@ -1,30 +1,34 @@
 <!DOCTYPE html>
-
 <html>
 <head>
-<title>VibeStack!</title>
+<title>VibeStack</title>
 <style>
-body { font-family: Arial; background:#f5f5f5; }
-.container { width: 500px; margin: auto; }
-.card { background:white; padding:10px; margin:10px 0; border-radius:8px; }
-button { margin-top:5px; }
-img, video { max-width:100%; }
+body { background:#111; color:white; font-family:Arial; text-align:center; }
+.container { width:600px; margin:auto; }
+input,button { padding:8px; margin:5px; }
+.card { background:#222; padding:10px; margin:10px; border-radius:10px; }
+img,video { max-width:100%; border-radius:10px; }
 </style>
 </head>
 
 <body>
-<div class="container">
 
-<h2>VibeStack</h2>
+<h1>VibeStack</h1>
+
+<div class="container">
 
 <input id="username" placeholder="username">
 <input id="password" type="password" placeholder="password">
+<br>
 <button onclick="register()">Register</button>
 <button onclick="login()">Login</button>
 
 <hr>
 
-<input type="file" id="file">
+<input type="file" id="file" onchange="previewFile()">
+<br>
+<img id="preview" style="display:none;">
+<br>
 <button onclick="upload()">Upload</button>
 
 <hr>
@@ -34,19 +38,26 @@ img, video { max-width:100%; }
 </div>
 
 <script>
-const API = "http://35.168.11.208:30007"; // change if needed
+const API = "http://35.168.11.208:30007";
 let token = "";
 
+function previewFile(){
+  const file = document.getElementById("file").files[0];
+  const preview = document.getElementById("preview");
+  preview.src = URL.createObjectURL(file);
+  preview.style.display="block";
+}
+
 async function register(){
-  const res = await fetch(API+"/register",{
+  await fetch(API+"/register",{
     method:"POST",
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      username:document.getElementById("username").value,
-      password:document.getElementById("password").value
+      username:username.value,
+      password:password.value
     })
   });
-  alert(await res.text());
+  alert("Registered");
 }
 
 async function login(){
@@ -54,10 +65,11 @@ async function login(){
     method:"POST",
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      username:document.getElementById("username").value,
-      password:document.getElementById("password").value
+      username:username.value,
+      password:password.value
     })
   });
+
   const data = await res.json();
   token = data.token;
   alert("Logged in");
@@ -65,15 +77,18 @@ async function login(){
 
 async function upload(){
   const file = document.getElementById("file").files[0];
+  if(!file) return alert("Select file");
+
   const form = new FormData();
   form.append("file",file);
 
-  await fetch(API+"/upload",{
+  const res = await fetch(API+"/upload",{
     method:"POST",
-    headers:{ Authorization: token },
+    headers:{ Authorization: "Bearer " + token },
     body: form
   });
 
+  alert(await res.text());
   loadFeed();
 }
 
@@ -83,7 +98,7 @@ async function comment(i){
     method:"POST",
     headers:{
       'Content-Type':'application/json',
-      Authorization: token
+      Authorization: "Bearer " + token
     },
     body: JSON.stringify({ index:i, text })
   });
@@ -94,27 +109,23 @@ async function loadFeed(){
   const res = await fetch(API+"/posts");
   const data = await res.json();
 
-  const feed = document.getElementById("feed");
-  feed.innerHTML = "";
+  feed.innerHTML="";
 
   data.forEach((p,i)=>{
-    const div = document.createElement("div");
+    const div=document.createElement("div");
     div.className="card";
 
-    let media = "";
-    if(p.url.includes(".mp4")){
+    let media = `<img src="${p.url}">`;
+    if(p.url.endsWith(".mp4")){
       media = `<video controls src="${p.url}"></video>`;
-    } else if(p.url.includes(".mp3")){
-      media = `<audio controls src="${p.url}"></audio>`;
-    } else {
-      media = `<img src="${p.url}">`;
     }
 
-    div.innerHTML = `
+    div.innerHTML=`
       <b>${p.user}</b><br>
-      ${media}<br>
+      ${media}
+      <br>
       <button onclick="comment(${i})">Comment</button>
-      <div>${p.comments.map(c=>`<p>${c}</p>`).join("")}</div>
+      ${p.comments.map(c=>`<p>${c}</p>`).join("")}
     `;
 
     feed.appendChild(div);
