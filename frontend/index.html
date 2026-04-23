@@ -1,40 +1,127 @@
 <!DOCTYPE html>
-<html>
-<body>
 
-<input id="user">
-<input id="pass">
+<html>
+<head>
+<title>VibeStack</title>
+<style>
+body { font-family: Arial; background:#f5f5f5; }
+.container { width: 500px; margin: auto; }
+.card { background:white; padding:10px; margin:10px 0; border-radius:8px; }
+button { margin-top:5px; }
+img, video { max-width:100%; }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>VibeStack</h2>
+
+<input id="username" placeholder="username">
+<input id="password" type="password" placeholder="password">
+<button onclick="register()">Register</button>
 <button onclick="login()">Login</button>
+
+<hr>
 
 <input type="file" id="file">
 <button onclick="upload()">Upload</button>
 
+<hr>
+
 <div id="feed"></div>
 
+</div>
+
 <script>
-let token="";
-const API="http://35.168.11.208:30007";
+const API = "http://35.168.11.208:30007"; // change if needed
+let token = "";
+
+async function register(){
+  const res = await fetch(API+"/register",{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      username:document.getElementById("username").value,
+      password:document.getElementById("password").value
+    })
+  });
+  alert(await res.text());
+}
 
 async function login(){
- const r=await fetch(API+"/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:user.value,password:pass.value})});
- const d=await r.json();token=d.token;load();
+  const res = await fetch(API+"/login",{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      username:document.getElementById("username").value,
+      password:document.getElementById("password").value
+    })
+  });
+  const data = await res.json();
+  token = data.token;
+  alert("Logged in");
 }
 
 async function upload(){
- const f=new FormData();
- f.append("file",file.files[0]);
- await fetch(API+"/upload",{method:"POST",headers:{Authorization:token},body:f});
- load();
+  const file = document.getElementById("file").files[0];
+  const form = new FormData();
+  form.append("file",file);
+
+  await fetch(API+"/upload",{
+    method:"POST",
+    headers:{ Authorization: token },
+    body: form
+  });
+
+  loadFeed();
 }
 
-async function load(){
- const r=await fetch(API+"/posts");
- const d=await r.json();
- feed.innerHTML="";
- d.forEach((p,i)=>{
-  feed.innerHTML+=`<p>${p.user}</p><img src="${p.url}" width=200>`;
- });
+async function comment(i){
+  const text = prompt("Comment:");
+  await fetch(API+"/comment",{
+    method:"POST",
+    headers:{
+      'Content-Type':'application/json',
+      Authorization: token
+    },
+    body: JSON.stringify({ index:i, text })
+  });
+  loadFeed();
 }
+
+async function loadFeed(){
+  const res = await fetch(API+"/posts");
+  const data = await res.json();
+
+  const feed = document.getElementById("feed");
+  feed.innerHTML = "";
+
+  data.forEach((p,i)=>{
+    const div = document.createElement("div");
+    div.className="card";
+
+    let media = "";
+    if(p.url.includes(".mp4")){
+      media = `<video controls src="${p.url}"></video>`;
+    } else if(p.url.includes(".mp3")){
+      media = `<audio controls src="${p.url}"></audio>`;
+    } else {
+      media = `<img src="${p.url}">`;
+    }
+
+    div.innerHTML = `
+      <b>${p.user}</b><br>
+      ${media}<br>
+      <button onclick="comment(${i})">Comment</button>
+      <div>${p.comments.map(c=>`<p>${c}</p>`).join("")}</div>
+    `;
+
+    feed.appendChild(div);
+  });
+}
+
+loadFeed();
 </script>
 
 </body>
