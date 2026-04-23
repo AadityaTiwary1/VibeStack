@@ -1,104 +1,81 @@
-const express = require('express');
-const cors = require('cors');
-const multer = require('multer');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const AWS = require('aws-sdk');
+const express = require('express')
+const jwt = require('jsonwebtoken')
+const bcrypt = require('bcrypt')
+const multer = require('multer')
+const AWS = require('aws-sdk')
+const cors = require('cors')
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const app = express()
+app.use(express.json())
+app.use(cors())
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage() })
 
-const users = [];
-const posts = [];
+const users = []
+const posts = []
 
-const SECRET = "secret123";
+const SECRET = "secret123"
 
-// IAM ROLE BASED (no keys)
-const s3 = new AWS.S3({
-  region: "us-east-1"
-});
+AWS.config.update({ region: "us-east-1" })
+const s3 = new AWS.S3()
 
-const BUCKET = "vibestack-media-123"; // ← your bucket
-
-// 🔐 AUTH MIDDLEWARE
-function auth(req, res, next){
-  const token = req.headers.authorization?.split(" ")[1];
-  if(!token) return res.status(401).send("No token");
-
+function auth(req, res, next) {
+  const token = req.headers.authorization
+  if (!token) return res.sendStatus(403)
   try {
-    const data = jwt.verify(token, SECRET);
-    req.user = data.username;
-    next();
+    req.user = jwt.verify(token, SECRET)
+    next()
   } catch {
-    res.status(403).send("Invalid token");
+    res.sendStatus(403)
   }
 }
 
-// REGISTER
-app.post('/register', async (req,res)=>{
-  const { username, password } = req.body;
-  const hash = await bcrypt.hash(password,10);
-  users.push({ username, password: hash });
-  res.send("Registered");
-});
+app.post('/register', async (req, res) => {
+  const hash = await bcrypt.hash(req.body.password, 10)
+  users.push({ username: req.body.username, password: hash })
+  res.send("registered")
+})
 
-// LOGIN
-app.post('/login', async (req,res)=>{
-  const { username, password } = req.body;
-  const user = users.find(u=>u.username===username);
-  if(!user) return res.status(404).send("User not found");
+app.post('/login', async (req, res) => {
+  const user = users.find(u => u.username === req.body.username)
+  if (!user) return res.sendStatus(401)
 
-  const ok = await bcrypt.compare(password,user.password);
-  if(!ok) return res.status(403).send("Wrong password");
+  const valid = await bcrypt.compare(req.body.password, user.password)
+  if (!valid) return res.sendStatus(401)
 
-  const token = jwt.sign({ username }, SECRET);
-  res.json({ token });
-});
+  const token = jwt.sign({ username: user.username }, SECRET)
+  res.json({ token })
+})
 
-// UPLOAD
-app.post('/upload', auth, upload.single("file"), async (req,res)=>{
-  if(!req.file) return res.status(400).send("No file");
-
-  const key = Date.now() + "_" + req.file.originalname;
-
+app.post('/upload', auth, upload.single('file'), async (req, res) => {
   const params = {
-    Bucket: BUCKET,
-    Key: key,
-    Body: req.file.buffer,
-    ContentType: req.file.mimetype
-  };
-
-  try {
-    await s3.upload(params).promise();
-
-    const url = `https://${BUCKET}.s3.amazonaws.com/${key}`;
-
-    posts.push({
-      url,
-      user: req.user,
-      comments:[]
-    });
-
-    res.send("Uploaded");
-  } catch(err){
-    console.log(err);
-    res.status(500).send("Upload failed");
+    Bucket: "vibestack-media-123",
+    Key: Date.now() + "_" + req.file.originalname,
+    Body: req.file.buffer
   }
-});
 
-// POSTS
-app.get('/posts',(req,res)=>{
-  res.json(posts);
-});
+  const data = await s3.upload(params).promise()
 
-// COMMENT
-app.post('/comment', auth, (req,res)=>{
-  const { index, text } = req.body;
-  posts[index].comments.push(req.user + ": " + text);
-  res.send("Comment added");
-});
+  posts.push({
+    url: data.Location,
+    user: req.user.username,
+    comments: []
+  })
 
-app.listen(3000,()=>console.log("Backend running"));
+  res.send("uploaded")
+})
+
+app.get('/posts', (req, res) => {
+  res.json(posts)
+})
+
+app.post('/comment', auth, (req, res) => {
+  const { index, text } = req.body
+  posts[index].comments.push({
+    user: req.user.username,
+    text
+  })
+  res.send("comment added")
+})
+
+app.listen(3000, () => console.log("running"))

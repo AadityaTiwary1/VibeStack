@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Feed</h2>
+
+<input type="file" id="file">
+<button onclick="upload()">Upload</button>
+
+<div id="feed"></div>
+
+<script>
+const token = localStorage.getItem("token")
+
+async function upload() {
+  const f = file.files[0]
+  const form = new FormData()
+  form.append("file", f)
+
+  await fetch('http://54.225.39.189:30007/upload', {
+    method: 'POST',
+    headers: { Authorization: token },
+    body: form
+  })
+  load()
+}
+
+async function load() {
+  const res = await fetch('http://54.225.39.189:30007/posts')
+  const data = await res.json()
+
+  feed.innerHTML = ""
+
+  data.forEach((p, i) => {
+    feed.innerHTML += `
+      <div>
+        <p>${p.user}</p>
+        <img src="${p.url}" width="200"/>
+        <input id="c${i}">
+        <button onclick="comment(${i})">Comment</button>
+        ${p.comments.map(c => `<p>${c.user}: ${c.text}</p>`).join("")}
+      </div>
+    `
+  })
+}
+
+async function comment(i) {
+  const text = document.getElementById("c"+i).value
+  await fetch('http://54.225.39.189:30007/comment', {
+    method: 'POST',
+    headers: {
+      'Content-Type':'application/json',
+      Authorization: token
+    },
+    body: JSON.stringify({ index: i, text })
+  })
+  load()
+}
+
+load()
+</script>
+
+</body>
+</html>
