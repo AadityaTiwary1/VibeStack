@@ -2,7 +2,7 @@
 <html>
 <body>
 
-<h2>Login / Register</h2>
+<h2>VibeStack</h2>
 
 <input id="username" placeholder="username"><br>
 <input id="password" type="password" placeholder="password"><br>
@@ -10,11 +10,11 @@
 <button onclick="register()">Register</button>
 <button onclick="login()">Login</button>
 
-<script>
-let token = ""
+<p id="msg"></p>
 
+<script>
 async function register() {
-  await fetch('http://54.225.39.189:30007/register', {
+  const res = await fetch('http://54.225.39.189:30007/register', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
@@ -22,6 +22,9 @@ async function register() {
       password: password.value
     })
   })
+
+  const data = await res.json()
+  msg.innerText = data.msg
 }
 
 async function login() {
@@ -33,9 +36,15 @@ async function login() {
       password: password.value
     })
   })
+
   const data = await res.json()
-  localStorage.setItem("token", data.token)
-  window.location = "feed.html"
+
+  if (data.token) {
+    localStorage.setItem("token", data.token)
+    window.location = "feed.html"
+  }
+
+  msg.innerText = data.msg
 }
 </script>
 

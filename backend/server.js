@@ -11,50 +11,99 @@ app.use(cors())
 
 const upload = multer({ storage: multer.memoryStorage() })
 
-const users = []
-const posts = []
-
 const SECRET = "secret123"
+const BUCKET = "vibestack-media-123"
+const DATA_KEY = "data.json"
 
 AWS.config.update({ region: "us-east-1" })
 const s3 = new AWS.S3()
 
+let users = []
+let posts = []
+
+// 🔁 LOAD DATA FROM S3
+async function loadData() {
+  try {
+    const data = await s3.getObject({ Bucket: BUCKET, Key: DATA_KEY }).promise()
+    const parsed = JSON.parse(data.Body.toString())
+    users = parsed.users || []
+    posts = parsed.posts || []
+  } catch {
+    users = []
+    posts = []
+  }
+}
+
+// 💾 SAVE DATA TO S3
+async function saveData() {
+  await s3.putObject({
+    Bucket: BUCKET,
+    Key: DATA_KEY,
+    Body: JSON.stringify({ users, posts }),
+    ContentType: "application/json"
+  }).promise()
+}
+
+// 🔐 AUTH MIDDLEWARE
 function auth(req, res, next) {
   const token = req.headers.authorization
-  if (!token) return res.sendStatus(403)
+  if (!token) return res.status(403).json({ msg: "No token provided" })
+
   try {
     req.user = jwt.verify(token, SECRET)
     next()
   } catch {
-    res.sendStatus(403)
+    res.status(403).json({ msg: "Invalid token" })
   }
 }
 
+// 🚀 INIT LOAD
+loadData()
+
+// ================= AUTH =================
+
 app.post('/register', async (req, res) => {
-  const hash = await bcrypt.hash(req.body.password, 10)
-  users.push({ username: req.body.username, password: hash })
-  res.send("registered")
+  const { username, password } = req.body
+
+  if (!username || !password)
+    return res.status(400).json({ msg: "All fields required" })
+
+  if (users.find(u => u.username === username))
+    return res.status(400).json({ msg: "User already exists" })
+
+  const hash = await bcrypt.hash(password, 10)
+  users.push({ username, password: hash })
+
+  await saveData()
+
+  res.json({ msg: "Registration successful" })
 })
 
 app.post('/login', async (req, res) => {
-  const user = users.find(u => u.username === req.body.username)
-  if (!user) return res.sendStatus(401)
+  const { username, password } = req.body
 
-  const valid = await bcrypt.compare(req.body.password, user.password)
-  if (!valid) return res.sendStatus(401)
+  const user = users.find(u => u.username === username)
+  if (!user)
+    return res.status(401).json({ msg: "User not found" })
 
-  const token = jwt.sign({ username: user.username }, SECRET)
-  res.json({ token })
+  const valid = await bcrypt.compare(password, user.password)
+  if (!valid)
+    return res.status(401).json({ msg: "Incorrect password" })
+
+  const token = jwt.sign({ username }, SECRET)
+  res.json({ token, msg: "Login successful" })
 })
 
-app.post('/upload', auth, upload.single('file'), async (req, res) => {
-  const params = {
-    Bucket: "vibestack-media-123",
-    Key: Date.now() + "_" + req.file.originalname,
-    Body: req.file.buffer
-  }
+// ================= POSTS =================
 
-  const data = await s3.upload(params).promise()
+app.post('/upload', auth, upload.single('file'), async (req, res) => {
+  const fileKey = Date.now() + "_" + req.file.originalname
+
+  const data = await s3.upload({
+    Bucket: BUCKET,
+    Key: fileKey,
+    Body: req.file.buffer
+  }).promise()
 
   posts.push({
     url: data.Location,
@@ -62,20 +111,30 @@ app.post('/upload', auth, upload.single('file'), async (req, res) => {
     comments: []
   })
 
-  res.send("uploaded")
+  await saveData()
+
+  res.json({ msg: "Upload successful" })
 })
 
-app.get('/posts', (req, res) => {
+app.get('/posts', async (req, res) => {
+  await loadData()
   res.json(posts)
 })
 
-app.post('/comment', auth, (req, res) => {
+app.post('/comment', auth, async (req, res) => {
   const { index, text } = req.body
+
+  if (!posts[index])
+    return res.status(400).json({ msg: "Invalid post" })
+
   posts[index].comments.push({
     user: req.user.username,
     text
   })
-  res.send("comment added")
+
+  await saveData()
+
+  res.json({ msg: "Comment added" })
 })
 
-app.listen(3000, () => console.log("running"))
+app.listen(3000, () => console.log("Server running"))
