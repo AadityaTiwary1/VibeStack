@@ -14,9 +14,7 @@ const posts = [];
 
 const SECRET = "secretkey";
 
-AWS.config.update({
-  region: "us-east-1"
-});
+AWS.config.update({ region: "us-east-1" });
 
 const s3 = new AWS.S3();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -24,7 +22,6 @@ const upload = multer({ storage: multer.memoryStorage() });
 function auth(req, res, next) {
   const token = req.headers.authorization;
   if (!token) return res.sendStatus(403);
-
   try {
     req.user = jwt.verify(token, SECRET);
     next();
@@ -51,35 +48,22 @@ app.post("/login", async (req, res) => {
 });
 
 app.post("/upload", auth, upload.single("file"), async (req, res) => {
-  const params = {
+  const data = await s3.upload({
     Bucket: process.env.BUCKET,
     Key: Date.now() + req.file.originalname,
     Body: req.file.buffer
-  };
+  }).promise();
 
-  const data = await s3.upload(params).promise();
-
-  const post = {
-    url: data.Location,
-    user: req.user.username,
-    comments: []
-  };
-
-  posts.push(post);
+  posts.push({ url: data.Location, user: req.user.username, comments: [] });
   res.send("uploaded");
 });
 
-app.get("/posts", (req, res) => {
-  res.json(posts);
-});
+app.get("/posts", (req, res) => res.json(posts));
 
 app.post("/comment", auth, (req, res) => {
   const { index, text } = req.body;
-  posts[index].comments.push({
-    user: req.user.username,
-    text
-  });
-  res.send("comment added");
+  posts[index].comments.push({ user: req.user.username, text });
+  res.send("done");
 });
 
-app.listen(3000, () => console.log("running"));
+app.listen(3000);

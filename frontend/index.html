@@ -2,55 +2,38 @@
 <html>
 <body>
 
-<h2>Auth</h2>
 <input id="user">
 <input id="pass">
-<button onclick="register()">Register</button>
 <button onclick="login()">Login</button>
 
-<h2>Upload</h2>
 <input type="file" id="file">
 <button onclick="upload()">Upload</button>
 
-<h2>Feed</h2>
 <div id="feed"></div>
 
 <script>
-let token = "";
-const API = "http://http://3.94.253.77/:30007";
-
-async function register(){
- await fetch(API+"/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:user.value,password:pass.value})});
-}
+let token="";
+const API="http://35.168.11.208:30007";
 
 async function login(){
- const res = await fetch(API+"/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:user.value,password:pass.value})});
- const data = await res.json();
- token = data.token;
- load();
+ const r=await fetch(API+"/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:user.value,password:pass.value})});
+ const d=await r.json();token=d.token;load();
 }
 
 async function upload(){
- const form = new FormData();
- form.append("file", file.files[0]);
- await fetch(API+"/upload",{method:"POST",headers:{Authorization:token},body:form});
+ const f=new FormData();
+ f.append("file",file.files[0]);
+ await fetch(API+"/upload",{method:"POST",headers:{Authorization:token},body:f});
  load();
 }
 
 async function load(){
- const res = await fetch(API+"/posts");
- const data = await res.json();
+ const r=await fetch(API+"/posts");
+ const d=await r.json();
  feed.innerHTML="";
- data.forEach((p,i)=>{
-  const d=document.createElement("div");
-  d.innerHTML=`<p>${p.user}</p><img src="${p.url}" width="200"><input id="c${i}"><button onclick="comment(${i})">Comment</button>${p.comments.map(c=>`<p>${c.user}:${c.text}</p>`).join("")}`;
-  feed.appendChild(d);
+ d.forEach((p,i)=>{
+  feed.innerHTML+=`<p>${p.user}</p><img src="${p.url}" width=200>`;
  });
-}
-
-async function comment(i){
- await fetch(API+"/comment",{method:"POST",headers:{"Content-Type":"application/json",Authorization:token},body:JSON.stringify({index:i,text:document.getElementById("c"+i).value})});
- load();
 }
 </script>
 

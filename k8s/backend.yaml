@@ -20,7 +20,7 @@ spec:
         - containerPort: 3000
         env:
         - name: BUCKET
-          value: "YOUR_BUCKET"
+          value: "vibestack-media-123"
 ---
 apiVersion: v1
 kind: Service
