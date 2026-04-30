@@ -4,174 +4,525 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VibeStack — Feed</title>
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
-  --bg: #06060f;
-  --surface: rgba(255,255,255,0.04);
-  --surface2: rgba(255,255,255,0.07);
-  --border: rgba(255,255,255,0.08);
-  --accent: #7c5cfc;
-  --accent-glow: rgba(124,92,252,0.3);
-  --accent2: #fc5c7d;
-  --text: #f0eeff;
-  --muted: rgba(240,238,255,0.45);
-  --muted2: rgba(240,238,255,0.25);
-  --radius: 16px;
-  --nav-h: 68px;
-}
+  :root {
+    --bg: #06060f;
+    --surface: rgba(255,255,255,0.04);
+    --surface2: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.08);
+    --accent: #7c5cfc;
+    --accent-glow: rgba(124,92,252,0.3);
+    --accent2: #fc5c7d;
+    --text: #f0eeff;
+    --muted: rgba(240,238,255,0.45);
+    --muted2: rgba(240,238,255,0.25);
+    --radius: 16px; /* Slightly sharper corners like Pinterest */
+    --nav-h: 68px;
+  }
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Outfit', sans-serif;
-}
+  html { scroll-behavior: smooth; }
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14.5px;
+  }
 
-nav {
-  position: fixed;
-  top: 0;
-  width: 100%;
-  height: var(--nav-h);
-  background: rgba(6,6,15,0.9);
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  z-index: 100;
-}
+  /* ── STATIC BG ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 10% 0%, rgba(124,92,252,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 90% 100%, rgba(252,92,125,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
 
-.nav-logo {
-  font-family: 'Bebas Neue';
-  font-size: 28px;
-  color: white;
-}
+  /* ── NAVBAR ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    height: var(--nav-h);
+    background: rgba(6,6,15,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+  }
 
-main {
-  padding-top: 90px;
-  max-width: 1200px;
-  margin: auto;
-  column-count: 3;
-  column-gap: 20px;
-}
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px;
+    letter-spacing: 1.5px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 60%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    flex: 0 0 auto;
+    text-decoration: none;
+  }
 
-.post-card {
-  background: var(--surface);
-  margin-bottom: 20px;
-  border-radius: var(--radius);
-  overflow: hidden;
-  break-inside: avoid;
-}
+  .nav-spacer { flex: 1; }
 
-.post-card img {
-  width: 100%;
-}
+  /* upload zone in nav */
+  .nav-upload {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
 
-.post-body {
-  padding: 10px;
-}
+  .file-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: 1px dashed var(--border);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--muted);
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    white-space: nowrap;
+  }
+  .file-label:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    background: rgba(124,92,252,0.07);
+  }
+  .file-label svg { flex-shrink: 0; }
+  #file { display: none; }
+  #file-name {
+    font-size: 12px;
+    color: var(--muted2);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-input {
-  width: 100%;
-  padding: 8px;
-  border-radius: 8px;
-  border: none;
-  margin-top: 8px;
-}
-button {
-  margin-top: 5px;
-  padding: 6px 10px;
-  border: none;
-  border-radius: 6px;
-  background: var(--accent);
-  color: white;
-  cursor: pointer;
-}
+  .btn-upload {
+    padding: 9px 20px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, var(--accent) 0%, #9d79ff 100%);
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 18px var(--accent-glow);
+    transition: box-shadow 0.2s, transform 0.15s;
+    white-space: nowrap;
+  }
+  .btn-upload:hover {
+    box-shadow: 0 6px 26px rgba(124,92,252,0.5);
+    transform: translateY(-1px);
+  }
+  .btn-upload:active { transform: scale(0.97); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: rgba(30,28,50,0.95);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 22px;
+    font-size: 13.5px;
+    color: var(--text);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── MAIN (Pinterest Masonry Layout) ── */
+  main {
+    position: relative; z-index: 1;
+    padding: calc(var(--nav-h) + 24px) 24px 48px;
+    min-height: 100vh;
+    max-width: 1600px;
+    margin: 0 auto;
+    
+    /* Masonry setup using columns */
+    column-count: 1;
+    column-gap: 20px;
+  }
+  
+  /* Responsive Breakpoints for Pinterest Grid */
+  @media (min-width: 640px) { main { column-count: 2; } }
+  @media (min-width: 900px) { main { column-count: 3; } }
+  @media (min-width: 1200px) { main { column-count: 4; } }
+  @media (min-width: 1500px) { main { column-count: 5; } }
+
+  /* ── EMPTY STATE & LOADER ── */
+  .empty-state, .loader {
+    column-span: all;
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+  .empty-state {
+    margin-top: 60px;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.8;
+  }
+  .empty-state .icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .loader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 40px;
+  }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── POST CARD ── */
+  .post-card {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 4px 40px rgba(0,0,0,0.3);
+    animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
+    
+    /* Essential rules to prevent cards from splitting across columns */
+    margin-bottom: 20px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    display: inline-block; 
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* card header */
+  .post-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .post-user {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  /* card image - NO FIXED HEIGHT/CROPPING */
+  .post-img-wrap {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  .post-img-wrap img {
+    width: 100%;
+    height: auto; /* Lets the image load fully proportional like Pinterest */
+    display: block;
+    transition: transform 0.4s ease;
+  }
+  .post-img-wrap:hover img { transform: scale(1.02); }
+
+  /* card body */
+  .post-body {
+    padding: 16px;
+  }
+
+  /* comments list */
+  .comments {
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .comment-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    animation: fadeUp 0.25s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .comment-avatar {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; color: #fff;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .comment-content { flex: 1; }
+  .comment-user { font-weight: 600; font-size: 12.5px; margin-right: 6px; }
+  .comment-text { font-size: 12.5px; color: rgba(240,238,255,0.8); font-weight: 300; }
+
+  /* comment input */
+  .comment-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .comment-input-row input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: 'Outfit', sans-serif;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    caret-color: var(--accent);
+  }
+  .comment-input-row input::placeholder { color: var(--muted2); }
+  .comment-input-row input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .btn-comment {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: none;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    white-space: nowrap;
+  }
+  .btn-comment:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
 </style>
 </head>
-
 <body>
 
+<!-- NAVBAR -->
 <nav>
-  <div class="nav-logo">VibeStack</div>
+  <a class="nav-logo" href="feed.html">VibeStack</a>
+
+  <div class="nav-spacer"></div>
+
+  <div class="nav-upload">
+    <label class="file-label" for="file">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <span>Choose file</span>
+    </label>
+    <input type="file" id="file" accept="image/*" onchange="onFileChange()">
+    <span id="file-name">no file chosen</span>
+    <button class="btn-upload" onclick="upload()">Post</button>
+  </div>
 </nav>
 
-<main id="feed"></main>
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- FEED -->
+<main id="feed">
+  <div class="loader">
+    <div class="spinner"></div>
+    Loading vibes…
+  </div>
+</main>
 
 <script>
-const BASE = "http://54.197.174.227:30007";
 const token = localStorage.getItem("token");
 
+// 🔐 FORCE LOGIN CHECK
 if (!token) {
-  alert("Login first");
+  alert("Please login first");
   window.location = "index.html";
 }
 
-// 🔹 Load Posts
+// ── TOAST ──────────────────────────────────────────
+let toastTimer;
+function showToast(text) {
+  const t = document.getElementById('toast');
+  t.textContent = text;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── FILE LABEL ─────────────────────────────────────
+function onFileChange() {
+  const f = document.getElementById('file').files[0];
+  document.getElementById('file-name').textContent = f ? f.name : 'no file chosen';
+}
+
+// ── AVATAR INITIAL ─────────────────────────────────
+function initial(name) {
+  return (name || '?')[0].toUpperCase();
+}
+
+// ── UPLOAD ─────────────────────────────────────────
+async function upload() {
+  const f = document.getElementById('file').files[0];
+  if (!f) return showToast('Select a file first');
+
+  const form = new FormData();
+  form.append("file", f);
+
+  const res = await fetch('http://54.197.174.227:30007/upload', {
+    method: 'POST',
+    headers: { Authorization: "Bearer " + token },
+    body: form
+  });
+  const data = await res.json();
+  showToast(data.msg);
+  load();
+}
+
+// ── LOAD POSTS ─────────────────────────────────────
 async function load() {
-  const res = await fetch(BASE + "/posts");
+  const feed = document.getElementById('feed');
+  feed.innerHTML = '<div class="loader"><div class="spinner"></div>Loading vibes…</div>';
+
+  const res = await fetch('http://54.197.174.227:30007/posts');
   const data = await res.json();
 
-  const feed = document.getElementById("feed");
   feed.innerHTML = "";
 
+  if (!data.length) {
+    feed.innerHTML = `
+      <div class="empty-state">
+        <span class="icon">🌌</span>
+        No vibes yet.<br>Be the first to post something.
+      </div>`;
+    return;
+  }
+
   data.forEach((p, i) => {
-    const card = document.createElement("div");
-    card.className = "post-card";
+    const card = document.createElement('div');
+    card.className = 'post-card';
+    card.style.animationDelay = (i * 0.07) + 's';
+
+    const commentsHTML = p.comments.map(c => `
+      <div class="comment-item">
+        <div class="comment-avatar">${initial(c.user)}</div>
+        <div class="comment-content">
+          <span class="comment-user">${escHtml(c.user)}</span>
+          <span class="comment-text">${escHtml(c.text)}</span>
+        </div>
+      </div>
+    `).join('');
 
     card.innerHTML = `
-      <img src="${p.url}">
+      <div class="post-header">
+        <div class="avatar">${initial(p.user)}</div>
+        <div>
+          <span class="post-user">${escHtml(p.user)}</span>
+        </div>
+      </div>
+      <div class="post-img-wrap">
+        <img src="${p.url}" alt="Post by ${escHtml(p.user)}" loading="lazy">
+      </div>
       <div class="post-body">
-        <b>${p.user}</b>
-
-        ${p.comments.map(c => `<div>${c.user}: ${c.text}</div>`).join("")}
-
-        <input id="c${i}" placeholder="Comment">
-        <button onclick="comment(${i})">Post</button>
+        ${p.comments.length ? `<div class="comments">${commentsHTML}</div>` : ''}
+        <div class="comment-input-row">
+          <input id="c${i}" placeholder="Add a comment…">
+          <button class="btn-comment" onclick="comment(${i})">Post</button>
+        </div>
       </div>
     `;
-
     feed.appendChild(card);
   });
 }
 
-// 🔹 Comment
+// ── COMMENT ────────────────────────────────────────
 async function comment(i) {
-  const text = document.getElementById("c" + i).value;
+  const inp = document.getElementById("c" + i);
+  const text = inp.value.trim();
+  if (!text) return;
 
-  await fetch(BASE + "/comment", {
-    method: "POST",
+  const res = await fetch('http://54.197.174.227:30007/comment', {
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       Authorization: "Bearer " + token
     },
     body: JSON.stringify({ index: i, text })
   });
-
+  const data = await res.json();
+  showToast(data.msg);
   load();
 }
 
-// 🔹 Upload (optional if you add UI later)
-async function upload(file) {
-  const form = new FormData();
-  form.append("file", file);
+// Allow Enter to post comment
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.id.startsWith('c') && !isNaN(e.target.id.slice(1))) {
+    const i = parseInt(e.target.id.slice(1));
+    comment(i);
+  }
+});
 
-  await fetch(BASE + "/upload", {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + token
-    },
-    body: form
-  });
-
-  load();
+// ── HTML ESCAPE ────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 load();
 </script>
-
 </body>
 </html>
