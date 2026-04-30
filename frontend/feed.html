@@ -422,7 +422,7 @@ async function upload() {
   const form = new FormData();
   form.append("file", f);
 
-  const res = await fetch('http://54.225.39.189:30007/upload', {
+  const res = await fetch('http://54.209.110.38:30007/upload', {
     method: 'POST',
     headers: { Authorization: "Bearer " + token },
     body: form
@@ -437,7 +437,7 @@ async function load() {
   const feed = document.getElementById('feed');
   feed.innerHTML = '<div class="loader"><div class="spinner"></div>Loading vibes…</div>';
 
-  const res = await fetch('http://54.225.39.189:30007/posts');
+  const res = await fetch('http://54.209.110.38:30007/posts');
   const data = await res.json();
 
   feed.innerHTML = "";
@@ -494,7 +494,7 @@ async function comment(i) {
   const text = inp.value.trim();
   if (!text) return;
 
-  const res = await fetch('http://54.225.39.189:30007/comment', {
+  const res = await fetch('http://54.209.110.38:30007/comment', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
