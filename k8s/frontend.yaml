@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vibestack-frontend
+  name: frontend
 spec:
   replicas: 1
   selector:
@@ -13,11 +13,10 @@ spec:
         app: frontend
     spec:
       containers:
-        - name: frontend
-          image: vibestack-frontend
-          imagePullPolicy: Never
-          ports:
-            - containerPort: 80
+      - name: frontend
+        image: vibestack-frontend:latest
+        ports:
+        - containerPort: 80
 ---
 apiVersion: v1
 kind: Service
@@ -28,6 +27,6 @@ spec:
   selector:
     app: frontend
   ports:
-    - port: 80
-      targetPort: 80
-      nodePort: 30008
+  - port: 80
+    targetPort: 80
+    nodePort: 30008
