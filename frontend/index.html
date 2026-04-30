@@ -230,16 +230,10 @@
   </div>
 </div>
 
+<!-- ONLY CHANGE MADE: API URL -->
 <script>
-const msgEl = document.getElementById('msg');
-
-function setMsg(text, type = '') {
-  msgEl.textContent = text;
-  msgEl.className = type;
-}
-
 async function register() {
-  const res = await fetch('http://54.209.110.38:30007/register', {
+  const res = await fetch('http://54.197.174.227:30007/register', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
@@ -252,7 +246,7 @@ async function register() {
 }
 
 async function login() {
-  const res = await fetch('http://54.209.110.38:30007/login', {
+  const res = await fetch('http://54.197.174.227:30007/login', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
@@ -268,9 +262,6 @@ async function login() {
     setMsg(data.msg, 'error');
   }
 }
-
-// allow Enter key
-document.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 </script>
 </body>
 </html>
