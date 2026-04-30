@@ -232,34 +232,55 @@
 
 <!-- ONLY CHANGE MADE: API URL -->
 <script>
+const BASE = "http://54.197.174.227:30007";
+
+function setMsg(text, type = '') {
+  const msgEl = document.getElementById('msg');
+  msgEl.textContent = text;
+  msgEl.className = type;
+}
+
 async function register() {
-  const res = await fetch('http://54.197.174.227:30007/register', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      username: username.value,
-      password: password.value
-    })
-  });
-  const data = await res.json();
-  setMsg(data.msg, 'success');
+  try {
+    const res = await fetch(`${BASE}/register`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value
+      })
+    });
+
+    const data = await res.json();
+    setMsg(data.msg, 'success');
+  } catch (e) {
+    setMsg("Backend not reachable", "error");
+    console.error(e);
+  }
 }
 
 async function login() {
-  const res = await fetch('http://54.197.174.227:30007/login', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      username: username.value,
-      password: password.value
-    })
-  });
-  const data = await res.json();
-  if (data.token) {
-    localStorage.setItem("token", data.token);
-    window.location = "feed.html";
-  } else {
-    setMsg(data.msg, 'error');
+  try {
+    const res = await fetch(`${BASE}/login`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.token) {
+      localStorage.setItem("token", data.token);
+      window.location = "feed.html";
+    } else {
+      setMsg(data.msg, 'error');
+    }
+  } catch (e) {
+    setMsg("Backend not reachable", "error");
+    console.error(e);
   }
 }
 </script>
